@@ -1,0 +1,99 @@
+# Step 1
+Null: On average, Dwight says "Michael" the same amount of times that Jim says "Michael" across all seasons.
+Alternative: On average, Dwight says "Michael" more than Jim says "Michael" across all seasons
+```{r}
+install.packages("tidytext")
+library(tidytext)
+library(schrute)
+library(dplyr)
+
+office_tokens <- theoffice %>% 
+  unnest_tokens(output = word, input = text)
+```
+#Step 2
+```{r}
+office_tokens$season <- as.numeric(office_tokens$season)
+
+dwight_michael <- office_tokens %>% 
+  group_by (episode) %>% 
+  filter (character == "Dwight") %>% 
+  filter (word == "michael") %>% 
+  summarise (total = sum(word == "michael")) # gives episodes 1-28 for each season. There aren't 28 episodes each season, but this ensures each episode is captured)
+
+jim_michael <- office_tokens %>% 
+  group_by (episode)  %>% 
+  filter (character == "Jim") %>% 
+  filter (word == "michael") %>% 
+  summarise (total = sum(word == "michael")) 
+
+
+(original <- mean(dwight_michael$total) - mean(jim_michael$total))
+# this is the original difference in the mean number of times that each person says michael
+```
+
+# Step 3
+```{r}
+n_reps <- 5000
+bootstrap_michael <- replicate(n_reps, {mean(sample(dwight_michael$total, replace = TRUE)) - mean(sample(jim_michael$total, replace = TRUE))})
+
+(CI <- quantile(bootstrap_michael, c(0.025,0.975)))
+```
+# Step 4
+```{r}
+dwight_jim <- c(jim_michael$total, dwight_michael$total)
+
+perm <- replicate(n_reps, {new_dwight <- sample(length(dwight_jim), length(dwight_michael$total))
+mean(dwight_jim[new_dwight]) - mean(dwight_jim[-new_dwight])})
+
+(p_val <- mean(perm >= original))
+
+
+(CI_perm <- p_val + c(lower = -1, estimate = 0, upper = 1) * qnorm(0.975) * sqrt(p_val * (1 - p_val) / length(perm)))
+```
+# Step 5
+Both tests (permutation and bootstrapping) show significance for the alternative hypothesis. The permutation test has a p-value between 0.013 and 0.02 (95% confidence) which is less than alpha level of 0.05. The bootstrap test demonstated a confidence interval of the difference in the mean number of times Dwight and Jim said "Michael" of (0.61 6.29), which shows that they mean number of times is different because the interval doesn't contain zero. That is, Dwight says "Michael" more times on average than Jim says "Michael" across all seasons.
+
+# Step 6
+```{r}
+plot(density(perm), ylim=c(0, 0.32))
+lines(density(bootstrap_michael))
+abline (v = original, col = "cornflowerblue") 
+
+```
+
+
+### Cars ###
+# Step 1
+```{r}
+observed <- cor(cars$speed, cars$dist)
+# this shows a high correlation (0.81) between speed and distance for this cars dataset
+observed
+```
+# Step 2
+```{r}
+n_samples <- 10000
+
+perm_two <- replicate(n_samples, 
+                      {new_car <- apply(cars[,1:2], 1, sample)
+                      cor(new_car[1, ], new_car[2, ])
+})
+
+```
+
+# Step 3
+```{r}
+plot(density(perm_two), xlim = c(-.5, 0.82))
+abline (v = observed, col = "red") # need to extend graph to include the original correlation coefficient
+```
+# Step 4
+```{r}
+(p_val_cars <- mean(perm_two > 0)) # what percent of the generated correlation coefficients are greater than 0
+```
+
+# Step 5
+```{r}
+(CI_cars <- p_val_cars + c(lower = -1, estimate = 0, upper = 1) * qnorm(0.975) * sqrt(p_val_cars * (1 - p_val_cars) / length(perm_two)))
+```
+
+# Step 6
+Because the p-value is less than 0.05 then we reject the null hypothesis. This permutation test shows there is truly a correlation between speed and distance for this cars dataset. 
