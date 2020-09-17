@@ -62,38 +62,3 @@ abline (v = original, col = "cornflowerblue")
 ```
 
 
-### Cars ###
-# Step 1
-```{r}
-observed <- cor(cars$speed, cars$dist)
-# this shows a high correlation (0.81) between speed and distance for this cars dataset
-observed
-```
-# Step 2
-```{r}
-n_samples <- 10000
-
-perm_two <- replicate(n_samples, 
-                      {new_car <- apply(cars[,1:2], 1, sample)
-                      cor(new_car[1, ], new_car[2, ])
-})
-
-```
-
-# Step 3
-```{r}
-plot(density(perm_two), xlim = c(-.5, 0.82))
-abline (v = observed, col = "red") # need to extend graph to include the original correlation coefficient
-```
-# Step 4
-```{r}
-(p_val_cars <- mean(perm_two > 0)) # what percent of the generated correlation coefficients are greater than 0
-```
-
-# Step 5
-```{r}
-(CI_cars <- p_val_cars + c(lower = -1, estimate = 0, upper = 1) * qnorm(0.975) * sqrt(p_val_cars * (1 - p_val_cars) / length(perm_two)))
-```
-
-# Step 6
-Because the p-value is less than 0.05 then we reject the null hypothesis. This permutation test shows there is truly a correlation between speed and distance for this cars dataset. 
